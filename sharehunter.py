@@ -61,7 +61,7 @@ def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir):
                         s.connect(host, port);
                         sleep(slptm);
 
-                        print("IP ADDRESS OR MACHINE NAME: {}\nPORT: {}\nSHARE INFO:\n".format(host, port));
+                        print("[i] IP ADDRESS OR MACHINE NAME: {}\n[i] PORT: {}\n[i] SHARE INFO:\n".format(host, port));
 
                         for share in s.listShares():
                             print("{} : {}{}".format(getPermissions("\\\\{}\\{}".format(host, share.name)), share.name, getShareComments(share.comments)));
@@ -90,7 +90,7 @@ def enumShare(host, ports, user, pword, slptm, addomain, lsdir):
                 s.connect(host, port);
                 sleep(slptm);
 
-                print("IP ADDRESS OR MACHINE NAME: {}\nPORT: {}\nSHARE INFO:\n".format(host, port));
+                print("[i] IP ADDRESS OR MACHINE NAME: {}\n[i] PORT: {}\n[i] SHARE INFO:\n".format(host, port));
 
                 for share in s.listShares():
                     print("{} : {}{}".format(getPermissions("\\\\{}\\{}".format(host, share.name)), share.name, getShareComments(share.comments)));
