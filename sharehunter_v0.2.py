@@ -19,6 +19,7 @@ def getArgs():
     parser.add_argument("-wait", required=False, type=int, default=0, help="Wait time in-between enumeration of shares (Default: 0)");
     parser.add_argument("-domain", required=False, type=str, default="", help="Domain (Default: None)");
     parser.add_argument("-verbose", required=False, action="store_true", default=False, help="List files and directories in shares (Default: false)");
+    parser.add_argument("-timeout", required=False, type=float, default=5, help="The amount of time sharehunter should spend trying to connect to a share before timing out (Default: 5 seconds. Also can take a float value like .5)");
 
     return parser.parse_args();
 
@@ -52,14 +53,14 @@ def getShareComments(comment):
         return "";
 
 
-def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir):
+def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir, tmout):
     try:
         with io.open(hostsFile, "r") as hosts:
             for host in hosts.read().splitlines():
                 for port in ports:
                     try:
                         s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True, sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
-                        s.connect(host, port);
+                        s.connect(host, port, timeout=tmout);
                         sleep(slptm);
 
                         print("[i] IP ADDRESS OR MACHINE NAME: {}\n[i] PORT: {}\n[i] SHARE INFO:\n".format(host, port));
@@ -71,7 +72,7 @@ def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir):
                             if lsdir:
                                 print("DIRECTORY LISTING FOR {}:".format(share.name));
                                 try:
-                                    for item in listdir("\\\\{}\\{}".format(host, share.name)):
+                                    for item in scandir("\\\\{}\\{}".format(host, share.name)):
                                         print("{}{}".format("   -", item));
                                 except Exception as le:
                                     print("MESSAGE: {}".format(le));
@@ -84,24 +85,23 @@ def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir):
         print("[!]: Script Aborted!");
 
 
-def enumShare(host, ports, user, pword, slptm, addomain, lsdir):
+def enumShare(host, ports, user, pword, slptm, addomain, lsdir, tmout):
     try:
         for port in ports:
             try:
                 s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True, sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
-                s.connect(host, port);
+                s.connect(host, port, timeout=tmout);
                 sleep(slptm);
 
                 print("[i] IP ADDRESS OR MACHINE NAME: {}\n[i] PORT: {}\n[i] SHARE INFO:\n".format(host, port));
 
                 for share in s.listShares():
-                    print("{} : {}{}".format(getPermissions("\\\\{}\\{}".format(host, share.name)), share.name,
-                                             getShareComments(share.comments)));
+                    print("{} : {}{}".format(getPermissions("\\\\{}\\{}".format(host, share.name)), share.name,getShareComments(share.comments)));
 
                     if lsdir:
                         print("DIRECTORY LISTING FOR {}:".format(share.name));
                         try:
-                            for item in listdir("\\\\{}\\{}".format(host, share.name)):
+                            for item in scandir("\\\\{}\\{}".format(host, share.name)):
                                 print("{}{}".format("   -", item));
                         except Exception as le:
                             print("MESSAGE: {}".format(le));
@@ -130,9 +130,9 @@ def parseArgs():
         pword = args.pword;
 
     if (args.host and not args.hosts):
-        enumShare(args.host, args.ports, str(user), str(pword), args.wait, args.domain, args.verbose);
+        enumShare(args.host, args.ports, str(user), str(pword), args.wait, args.domain, args.verbose, args.timeout);
     elif (args.hosts and not args.host):
-        enumShares(path.abspath(args.hosts), args.ports, str(user), str(pword), args.wait, args.domain, args.verbose);
+        enumShares(path.abspath(args.hosts), args.ports, str(user), str(pword), args.wait, args.domain, args.verbose, args.timeout);
 
 
 def main():
@@ -153,9 +153,3 @@ def main():
 
 # main
 main();
-
-
-
-
-
-# PREVIOUS WORKING VERSION VERSION
