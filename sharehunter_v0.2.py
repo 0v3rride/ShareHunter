@@ -58,8 +58,7 @@ def enumShares(hostsFile, ports, user, pword, slptm, addomain, lsdir):
             for host in hosts.read().splitlines():
                 for port in ports:
                     try:
-                        s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True,
-                                          sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
+                        s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True, sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
                         s.connect(host, port);
                         sleep(slptm);
 
@@ -89,8 +88,7 @@ def enumShare(host, ports, user, pword, slptm, addomain, lsdir):
     try:
         for port in ports:
             try:
-                s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True,
-                                  sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
+                s = SMBConnection(user, pword, gethostname(), host, addomain, use_ntlm_v2=True, sign_options=SMBConnection.SIGN_WHEN_REQUIRED, is_direct_tcp=True);
                 s.connect(host, port);
                 sleep(slptm);
 
@@ -118,29 +116,23 @@ def enumShare(host, ports, user, pword, slptm, addomain, lsdir):
 
 def parseArgs():
     args = getArgs();
-    user = None;
-    pword = None;
+    user = "";
+    pword = "";
 
     if not args.user:
         user = input("Username to use to authenticate to shares: ");
     elif args.user:
         user = args.user;
-    else:
-        user = "";
 
     if not args.pword:
         pword = input("Password for username that will be used: ");
     elif args.pword:
         pword = args.pword;
-    else:
-        pword = "";
 
     if (args.host and not args.hosts):
-        enumShare(args.host, args.ports, user, pword, args.wait, args.domain, args.verbose);
+        enumShare(args.host, args.ports, str(user), str(pword), args.wait, args.domain, args.verbose);
     elif (args.hosts and not args.host):
-        enumShares(path.abspath(args.hosts), args.ports, user, pword, args.wait, args.domain, args.verbose);
-    else:
-        print("[!]: Choose either -host or -hosts argument in a single instance!");
+        enumShares(path.abspath(args.hosts), args.ports, str(user), str(pword), args.wait, args.domain, args.verbose);
 
 
 def main():
@@ -161,3 +153,9 @@ def main():
 
 # main
 main();
+
+
+
+
+
+# PREVIOUS WORKING VERSION VERSION
