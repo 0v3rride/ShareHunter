@@ -1,4 +1,6 @@
 # ShareHunter.py
+This is a work in progress and does not fully function as intended.
+
 Finds smb/samba shares on the network as quickly or as slowly as you want.
 * Requires Python 3 and pysmb. 
 * At the moment, it works more efficiently with on Windows
