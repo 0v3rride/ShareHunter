@@ -62,10 +62,15 @@ def spiderShares(sharepath, depth, tabcount):
             # take current dir share, add dir to path and then list if depth is greater than 0
 
             if depth is 1:
-                tabcount += 1;
-                for item in listdir("{}\\{}".format(sharepath, item)):
-                    print("{}{}{}".format("\t" * tabcount, "- ", str(item)));
-
+                try:
+                    tabcount += 1;
+                    if path.isdir("{}\\{}".format(sharepath, item)):
+                        for subitem in listdir("{}\\{}".format(sharepath, item)):
+                            print("{}{}{}".format("\t" * tabcount, "- ", str(subitem)));
+                    elif path.isfile("{}\\{}".format(sharepath, item)):
+                        print("{}{}{}".format("\t" * tabcount, "- ", str(item)));
+                except Exception as se:
+                        print("MESSAGE: {}".format(se));
             tabcount = 0;
 
     except Exception as le:
@@ -158,9 +163,25 @@ def parseArgs():
 
 def main():
     print("""
+    
+                   _________________
+                  /        ^        \\
+                 /         |         \\
+                /   /*****\|          \\
+               /   +---------------+   \\
+              /    |Top    |       |    \\
+             /     |Secret +       |     \\
+            /<------------+O+------------>\\
+            \      |       +       |      /
+             \     |       |       |     /
+              \    +---------------+    /
+               \           |           /
+                \          |          /
+                 \         |         /
+                  \________v________/
  __             __   ___                   ___  ___  __  
 /__` |__|  /\  |__) |__     |__| |  | |\ |  |  |__  |__) 
-.__/ |  | /--\ |  \ |___    |  | \__/ | \|  |  |___ |  \ v0.2
+.__/ |  | /--\ |  \ |___    |  | \__/ | \|  |  |___ |  \ v0.3
 
             [*] https://github.com/0v3rride
             [*] Script has started...
