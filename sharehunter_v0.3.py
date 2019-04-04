@@ -20,7 +20,7 @@ def getArgs():
     parser.add_argument("-domain", required=False, type=str, default="", help="Domain (Default: None)");
     parser.add_argument("-verbose", required=False, action="store_true", default=False, help="List files and directories in shares (Default: false)");
     parser.add_argument("-timeout", required=False, type=float, default=5, help="The amount of time sharehunter should spend trying to connect to a share before timing out (Default: 5 seconds. Also can take a float value like .5)");
-    parser.add_argument("-depth", required=False, type=int, default=1, help="The depth of the file structure to spider (Default: 0 (0 or 1))");
+    parser.add_argument("-depth", required=False, type=int, default=0, help="The depth of the file structure to spider (Default: 0 (0 or 1))");
 
     return parser.parse_args();
 
@@ -30,20 +30,14 @@ def getPermissions(unc):
 
     if access(unc, R_OK):
         bitval += 4;
-    if access(unc, X_OK):
-        bitval += 1;
     if access(unc, W_OK):
         bitval += 2;
 
     return {
         0: "NO PERMS",
-        1: "EXEC",
         2: "WRITE",
-        3: "WRITE, EXEC",
         4: "READ",
-        5: "READ, EXEC",
         6: "READ, WRITE",
-        7: "READ, WRITE, EXEC"
     }.get(bitval, "UNKNOWN");
 
 
@@ -70,11 +64,12 @@ def spiderShares(sharepath, depth, tabcount):
                     elif path.isfile("{}\\{}".format(sharepath, item)):
                         print("{}{}{}".format("\t" * tabcount, "- ", str(item)));
                 except Exception as se:
-                        print("MESSAGE: {}".format(se));
+                        print("!!!ERROR: {}".format(se));
             tabcount = 0;
 
     except Exception as le:
-        print("MESSAGE: {}".format(le));
+        print("!!!ERROR: {}".format(le));
+
     print("\n");
 
 
@@ -99,9 +94,9 @@ def hostsEnum(hostsFile, ports, user, pword, slptm, addomain, lsdir, tmout, dept
                                 print("DIRECTORY LISTINGS FOR SHARE: \\\\{}\\{}:".format(host, share.name));
                                 spiderShares("\\\\{}\\{}".format(host, share.name), depth, 0);
 
-                        print("{}".format("="*135));
+                        print("{}".format("="*150));
                     except Exception as e:
-                        print("MESSAGE: {}:{} - {}\n{}".format(host, port, e, "="*135));
+                        print("!!!ERROR: {}:{} ({}) - {}\n{}\n".format(host, port, getfqdn(host), e, "="*150));
     except KeyboardInterrupt as ki:
         print("[!]: Script Aborted!");
 
@@ -125,9 +120,9 @@ def hostEnum(host, ports, user, pword, slptm, addomain, lsdir, tmout, depth):
                         print("DIRECTORY LISTINGS FOR SHARE: \\\\{}\\{}:".format(host, share.name));
                         spiderShares("\\\\{}\\{}".format(host, share.name), depth, 0);
 
-                print("{}".format("="*135));
+                print("{}".format("="*150));
             except Exception as e:
-                print("MESSAGE: {}:{} - {}\n{}".format(host, port, e, "="*135));
+                print("!!!ERROR: {}:{} ({}) - {}\n{}\n".format(host, port, getfqdn(host), e, "="*150));
     except KeyboardInterrupt as ki:
         print("[!]: Script Aborted!");
 
