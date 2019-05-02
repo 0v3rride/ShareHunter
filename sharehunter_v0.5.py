@@ -56,7 +56,9 @@ def keywordSearch(keyword, path):
 def listAllFiles(sharepath, kwrdexp):
     for root, subdirs, files in walk(sharepath):
         for f in files:
-            if kwrdexp:
+            if kwrdexp and platform.system() is "Windows":
+                keywordSearch(kwrdexp, "{}\{}".format(root, f));
+            elif kwrdexp and platform.system():
                 keywordSearch(kwrdexp, "{}/{}".format(root, f));
             elif platform.system() is "Windows":
                 print("{}\{}".format(root, f));
@@ -68,7 +70,9 @@ def listAllFiles(sharepath, kwrdexp):
 def listAllSubdirs(sharepath, kwrdexp):
     for root, subdirs, files in walk(sharepath):
         for s in subdirs:
-            if kwrdexp:
+            if kwrdexp and platform.system() is "Windows":
+                keywordSearch(kwrdexp, "{}\{}".format(root, s));
+            elif kwrdexp and platform.system():
                 keywordSearch(kwrdexp, "{}/{}".format(root, s));
             elif platform.system() is "Windows":
                 print("{}\{}".format(root, s));
@@ -201,3 +205,30 @@ def main():
 
 # Begin
 main();
+
+
+
+
+# def spiderShares(sharepath, depth, tabcount):
+#     try:
+#         for item in listdir(sharepath):
+#             print("{}{}{}".format("\t" * tabcount,"- ", str(item)));
+#
+#             # take current dir share, add dir to path and then list if depth is greater than 0
+#
+#             if depth is 1:
+#                 try:
+#                     tabcount += 1;
+#                     if path.isdir("{}\\{}".format(sharepath, item)):
+#                         for subitem in listdir("{}\\{}".format(sharepath, item)):
+#                             print("{}{}{}".format("\t" * tabcount, "- ", str(subitem)));
+#                     elif path.isfile("{}\\{}".format(sharepath, item)):
+#                         print("{}{}{}".format("\t" * tabcount, "- ", str(item)));
+#                 except Exception as se:
+#                         print("!!!ERROR: {}".format(se));
+#             tabcount = 0;
+#
+#     except Exception as le:
+#         print("!!!ERROR: {}".format(le));
+#
+#     print("\n");
