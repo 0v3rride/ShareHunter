@@ -1,9 +1,13 @@
-# ShareHunter.py
-This is a work in progress and does not fully function as intended.
+# ShareHunter
+The Python script is a work in progress and does not fully function as intended.
 
-* Requires Python 3 and pysmb module. 
-* Currently works the best on Windows at the moment.
-* Share permission checks are not entierly accurate. Currently working on finding a way to correct this.
+* Python
+  * Requires Python 3 and pysmb module. 
+  * Currently works the best on Windows at the moment.
+  * Share permission checks are not entierly accurate. Currently working on finding a way to correct this.
+  
+* PowerShell
+  * Calls the net executable with the view option and parses the output which is then feed to the Get-Acl cmdlet.
 
 ### Why?
 * MSF auxiliary/scanner/smb/smb_enumshares doesn't spider shares despite arguments given.
@@ -11,4 +15,5 @@ This is a work in progress and does not fully function as intended.
 * Wanted to try something new.
 
 ### Todo list
-* Create a working version for Linux 
+* Create a working version for Linux (Python) 
+* Add functionality to enumerate shares as a different user with credentials (PowerShell)
