@@ -4,6 +4,7 @@ function Invoke-ShareHunter {
         [Parameter(Mandatory = $true)]
         [string]$HostList,
         [string]$Domain = $env:USERDNSDOMAIN,
+        [double]$Delay = $null,
         [string]$Username = $null,
         [securestring]$Password = $null
     )
@@ -30,11 +31,17 @@ function Invoke-ShareHunter {
                 # [void]$AceArray.Add($AccessObject)
             }
 
-            $AceArray
+            $AceArray;
+            Start-Sleep($Sleep);
         }
         catch [System.UnauthorizedAccessException] {
             if ($VerbosePreference) {
-                Write-Verbose "Not enough permissions to show rights for share: \\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])`n";
+                try {
+                    Write-Verbose "Not enough permissions to show rights for share: \\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])`n";
+                }
+                catch [System.Net.Sockets.SocketException] {
+                    Write-Verbose "Not enough permissions to show rights for share: \\$($RemoteHost)\$($Share.Split(',')[0])`n";
+                }
             }
         }
         catch [System.Management.Automation.ItemNotFoundException] {
@@ -44,10 +51,19 @@ function Invoke-ShareHunter {
         }
     }
 
+
+    #Main Execution Starts Here
     foreach ($RemoteHost in (Get-Content -Path $HostList)) {
-        foreach ($Share in ((net view \\$RemoteHost /all /Domain:$Domain) | Select-Object -Skip 7).Replace("The command completed successfully.", "").TrimEnd(" ") -replace "\s{2,}", ",") {
-            if ($Share -and ![string]::IsNullOrWhiteSpace($Share)) {
-                Enum-Shares -RemoteHost $RemoteHost -Share $Share;
+        try {
+            foreach ($Share in ((net view \\$RemoteHost /all /Domain:$Domain 2> $null) | Select-Object -Skip 7).Replace("The command completed successfully.", "").TrimEnd(" ") -replace "\s{2,}", ",") {
+                if ($Share -and ![string]::IsNullOrWhiteSpace($Share) -and $Share -notlike "*IPC$*") {
+                    Enum-Shares -RemoteHost $RemoteHost -Share $Share;
+                }
+            }
+        }
+        catch [System.Exception] {
+            if ($VerbosePreference) {
+                Write-Verbose "Unknown Error";
             }
         }
     }
