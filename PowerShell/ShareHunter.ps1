@@ -6,7 +6,8 @@ function Invoke-ShareHunter {
         [string]$Domain = $env:USERDNSDOMAIN,
         [double]$Delay = $null,
         [string]$Username = $null,
-        [securestring]$Password = $null
+        [securestring]$Password = $null,
+        [switch]$ShowProgress
     )
 
     function Enum-Shares {
@@ -20,19 +21,18 @@ function Invoke-ShareHunter {
             $AceArray = New-Object System.Collections.ArrayList;
 
             foreach ($AccessObject in (Get-Acl -Path ("\\{0}\{1}" -f $RemoteHost, $Share.Split(',')[0]) -ErrorAction Stop).Access) {
-                $Result = "" | Select-Object SharePath, AccessControlType, IdentityReference, FileSystemRights; #assign these properties to the Result custom object
+                $Result = "" | Select-Object SharePath, AccessControlType, IdentityReference, FileSystemRights; #assign these properties to the Result pscustomobject
                 $Result.SharePath = "\\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])";
                 $Result.AccessControlType = $AccessObject.AccessControlType;
                 $Result.IdentityReference = $AccessObject.IdentityReference;
                 $Result.FileSystemRights = $AccessObject.FileSystemRights;
-                [void]$AceArray.Add($Result);
+                [void]$AceArray.Add($Result); #Array of pscustomobjects
             
                 # $AccessObject | Add-Member -Type NoteProperty -Name SharePath -Value "\\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])";
                 # [void]$AceArray.Add($AccessObject)
             }
 
             $AceArray;
-            Start-Sleep($Sleep);
         }
         catch [System.UnauthorizedAccessException] {
             if ($VerbosePreference) {
@@ -53,7 +53,20 @@ function Invoke-ShareHunter {
 
 
     #Main Execution Starts Here
-    foreach ($RemoteHost in (Get-Content -Path $HostList)) {
+    $Count = 0;
+    $Targets = (Get-Content -Path $HostList)
+    
+    if (!$ShowProgress) {
+        $ProgressPreference = "SilentlyContinue";
+    }
+    elseif ($ShowProgress) {
+        $ProgressPreference = "Continue"
+    }
+
+    foreach ($RemoteHost in $Targets) {
+        $Count++;
+        Write-Progress -Activity "Enumerating SMB Shares" -Status "Enumeration Progress: $([Math]::Ceiling(($Count/$Targets.Length) * 100))%" -PercentComplete $([Math]::Ceiling(($Count/$Targets.Length) * 100));
+
         try {
             foreach ($Share in ((net view \\$RemoteHost /all /Domain:$Domain 2> $null) | Select-Object -Skip 7).Replace("The command completed successfully.", "").TrimEnd(" ") -replace "\s{2,}", ",") {
                 if ($Share -and ![string]::IsNullOrWhiteSpace($Share) -and $Share -notlike "*IPC$*") {
@@ -63,8 +76,9 @@ function Invoke-ShareHunter {
         }
         catch [System.Exception] {
             if ($VerbosePreference) {
-                Write-Verbose "Unknown Error";
+                Write-Verbose "System Error";
             }
         }
+        Start-Sleep -Seconds $Delay;
     }
 }
