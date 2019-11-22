@@ -6,55 +6,107 @@ function Invoke-ShareHunter {
         [string]$Domain = $env:USERDNSDOMAIN,
         [double]$Delay = $null,
         [string]$Username = $null,
-        [securestring]$Password = $null,
+        $Password = $null,
         [switch]$ShowProgress
     )
 
-    function Enum-Shares {
+    function Get-ShareAce {
         [CmdletBinding()]
         param (
-            [string]$RemoteHost,
-            [String]$Share
+            [string]$Target,
+            [string]$Share,
+            [System.Management.Automation.PSCredential]$Credential
         )
 
-        try {
-            $AceArray = New-Object System.Collections.ArrayList;
+        $AceArray = New-Object System.Collections.ArrayList;
 
-            foreach ($AccessObject in (Get-Acl -Path ("\\{0}\{1}" -f $RemoteHost, $Share.Split(',')[0]) -ErrorAction Stop).Access) {
+        If ($Credential) {
+            #Job - run get-acl cmdlet under the context of another user via start-job
+            $Job = (Start-Job -Credential $Credential -ArgumentList @($Target, ($Share.Split(',')[0]), $VerbosePreference) -ScriptBlock { 
+                param(
+                    $THost, 
+                    $TShare, 
+                    $VPref
+                ) 
+
+                try {
+                        (Get-Acl -Path ("\\{0}\{1}" -f $THost, $TShare.Split(',')[0]) -ErrorAction Stop).Access
+                    }
+                    catch [System.UnauthorizedAccessException] {
+                        if ($VPref) {
+                            try {
+                                Write-Verbose "Not enough permissions to show rights for share: \\$([System.Net.Dns]::GetHostEntry($THost).HostName)\$($TShare.Split(',')[0])`n";
+                            }
+                            catch [System.Net.Sockets.SocketException] {
+                                Write-Verbose "Not enough permissions to show rights for share: \\$($THost)\$($TShare.Split(',')[0])`n";
+                            }
+                        }
+                    }
+                    catch [System.Management.Automation.ItemNotFoundException] {
+                        if ($VPref) {
+                            Write-Verbose "The share \\$([System.Net.Dns]::GetHostEntry($THost).HostName)\$($TShare.Split(',')[0]) could not be found!`n";
+                        }
+                    } 
+                });
+
+            [void](Wait-Job -Job $Job);
+            $AccessObject = Receive-Job -Job $Job; 
+
+            foreach ($Ace in $AccessObject) {
                 $Result = "" | Select-Object SharePath, AccessControlType, IdentityReference, FileSystemRights; #assign these properties to the Result pscustomobject
-                $Result.SharePath = "\\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])";
-                $Result.AccessControlType = $AccessObject.AccessControlType;
-                $Result.IdentityReference = $AccessObject.IdentityReference;
-                $Result.FileSystemRights = $AccessObject.FileSystemRights;
+                $Result.SharePath = "\\$([System.Net.Dns]::GetHostEntry($Target).HostName)\$($Share.Split(',')[0])";
+                $Result.AccessControlType = $Ace.AccessControlType;
+                $Result.IdentityReference = $Ace.IdentityReference;
+                $Result.FileSystemRights = $Ace.FileSystemRights;
                 [void]$AceArray.Add($Result); #Array of pscustomobjects
-            
+                
                 # $AccessObject | Add-Member -Type NoteProperty -Name SharePath -Value "\\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])";
                 # [void]$AceArray.Add($AccessObject)
             }
-
-            $AceArray;
         }
-        catch [System.UnauthorizedAccessException] {
-            if ($VerbosePreference) {
-                try {
-                    Write-Verbose "Not enough permissions to show rights for share: \\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])`n";
-                }
-                catch [System.Net.Sockets.SocketException] {
-                    Write-Verbose "Not enough permissions to show rights for share: \\$($RemoteHost)\$($Share.Split(',')[0])`n";
+        else {
+            try {
+                foreach ($AccessObject in (Get-Acl -Path ("\\{0}\{1}" -f $Target, $Share.Split(',')[0]) -ErrorAction Stop).Access) {
+                    $Result = "" | Select-Object SharePath, AccessControlType, IdentityReference, FileSystemRights; #assign these properties to the Result pscustomobject
+                    $Result.SharePath = "\\$([System.Net.Dns]::GetHostEntry($Target).HostName)\$($Share.Split(',')[0])";
+                    $Result.AccessControlType = $AccessObject.AccessControlType;
+                    $Result.IdentityReference = $AccessObject.IdentityReference;
+                    $Result.FileSystemRights = $AccessObject.FileSystemRights;
+                    [void]$AceArray.Add($Result); #Array of pscustomobjects
+                    
+                    # $AccessObject | Add-Member -Type NoteProperty -Name SharePath -Value "\\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0])";
+                    # [void]$AceArray.Add($AccessObject)
                 }
             }
-        }
-        catch [System.Management.Automation.ItemNotFoundException] {
-            if ($VerbosePreference) {
-                Write-Verbose "The share \\$([System.Net.Dns]::GetHostEntry($RemoteHost).HostName)\$($Share.Split(',')[0]) could not be found!`n";
+            catch [System.UnauthorizedAccessException] {
+                if ($VerbosePreference) {
+                    try {
+                        Write-Verbose "Not enough permissions to show rights for share: \\$([System.Net.Dns]::GetHostEntry($Target).HostName)\$($Share.Split(',')[0])`n";
+                    }
+                    catch [System.Net.Sockets.SocketException] {
+                        Write-Verbose "Not enough permissions to show rights for share: \\$($Target)\$($Share.Split(',')[0])`n";
+                    }
+                }
             }
+            catch [System.Management.Automation.ItemNotFoundException] {
+                if ($VerbosePreference) {
+                    Write-Verbose "The share \\$([System.Net.Dns]::GetHostEntry($Target).HostName)\$($Share.Split(',')[0]) could not be found!`n";
+                }
+            }    
         }
+        $AceArray;
     }
 
 
     #Main Execution Starts Here
     $Count = 0;
-    $Targets = (Get-Content -Path $HostList)
+    $Targets = (Get-Content -Path $HostList);
+    $Cred = $null;
+
+    if ($Password) {
+        $SecPassword = (ConvertTo-SecureString $Password -AsPlainText -Force); 
+        $Cred = New-Object System.Management.Automation.PSCredential ("$($env:USERDNSDOMAIN)\$($Username)", $SecPassword);
+    }
     
     if (!$ShowProgress) {
         $ProgressPreference = "SilentlyContinue";
@@ -65,18 +117,23 @@ function Invoke-ShareHunter {
 
     foreach ($RemoteHost in $Targets) {
         $Count++;
-        Write-Progress -Activity "Enumerating SMB Shares" -Status "Enumeration Progress: $([Math]::Ceiling(($Count/$Targets.Length) * 100))%" -PercentComplete $([Math]::Ceiling(($Count/$Targets.Length) * 100));
+        Write-Progress -Activity "Enumerating SMB Shares" -Status "Enumeration Progress: $([Math]::Ceiling(($Count/$Targets.Length) * 100))%" -PercentComplete $([Math]::Ceiling(($Count / $Targets.Length) * 100));
 
         try {
             foreach ($Share in ((net view \\$RemoteHost /all /Domain:$Domain 2> $null) | Select-Object -Skip 7).Replace("The command completed successfully.", "").TrimEnd(" ") -replace "\s{2,}", ",") {
                 if ($Share -and ![string]::IsNullOrWhiteSpace($Share) -and $Share -notlike "*IPC$*") {
-                    Enum-Shares -RemoteHost $RemoteHost -Share $Share;
+                    if ($Username -and $Password) {
+                        Get-ShareAce -Target $RemoteHost -Share $Share -Credential $Cred;
+                    }
+                    else {
+                        Get-ShareAce -Target $RemoteHost -Share $Share;
+                    }
                 }
             }
         }
         catch [System.Exception] {
             if ($VerbosePreference) {
-                Write-Verbose "System Error";
+                Write-Verbose "Error: $_";
             }
         }
         Start-Sleep -Seconds $Delay;
