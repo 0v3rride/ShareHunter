@@ -7,7 +7,7 @@ The Python script is a work in progress and does not fully function as intended.
   * Share permission checks are not entierly accurate. Currently working on finding a way to correct this.
   
 * PowerShell
-  * Calls the net executable with the view option and parses the output which is then feed to the Get-Acl cmdlet.
+  * Calls the net executable with the view option and parses the output which is then fed to the Get-Acl cmdlet.
 
 ### Why?
 * MSF auxiliary/scanner/smb/smb_enumshares doesn't spider shares despite arguments given.
