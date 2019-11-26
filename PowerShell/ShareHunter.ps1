@@ -1,12 +1,21 @@
 function Invoke-ShareHunter {
+    <#
+        .Synopsis
+        Enumerates the permissions of SMB shares
+
+        .Description
+        Enumerates the permissions of SMB shares on the NTFS level via a list of hosts seperated by newlines in a text file
+    #>
+
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [string]$HostList,
-        [string]$Domain = $env:USERDNSDOMAIN,
+        [string]$Domain = $null,
         [double]$Delay = $null,
         [string]$Username = $null,
-        $Password = $null,
+        [string[]]$Exclude = @("IPC$", "Print$"),
+        [string]$Password = $null,
         [switch]$ShowProgress
     )
 
@@ -121,12 +130,15 @@ function Invoke-ShareHunter {
 
         try {
             foreach ($Share in ((net view \\$RemoteHost /all /Domain:$Domain 2> $null) | Select-Object -Skip 7).Replace("The command completed successfully.", "").TrimEnd(" ") -replace "\s{2,}", ",") {
-                if ($Share -and ![string]::IsNullOrWhiteSpace($Share) -and $Share -notlike "*IPC$*") {
-                    if ($Username -and $Password) {
-                        Get-ShareAce -Target $RemoteHost -Share $Share -Credential $Cred;
-                    }
-                    else {
-                        Get-ShareAce -Target $RemoteHost -Share $Share;
+                if ($Share -and ![string]::IsNullOrWhiteSpace($Share)) {
+                    if($Exclude -notcontains $Share.Split(",")[0])
+                    {
+                        if ($Username -and $Password) {
+                            Get-ShareAce -Target $RemoteHost -Share $Share -Credential $Cred;
+                        }
+                        else {
+                            Get-ShareAce -Target $RemoteHost -Share $Share;
+                        }
                     }
                 }
             }
