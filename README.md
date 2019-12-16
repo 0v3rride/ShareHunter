@@ -15,5 +15,3 @@ The Python script is a work in progress and does not fully function as intended.
 * Wanted to try something new.
 
 ### Todo list
-* Create a working version for Linux (Python) 
-* Add functionality to enumerate shares as a different user with credentials (PowerShell)
